@@ -37,6 +37,14 @@ void loop()
     Serial.println(one.length());
    }
    if(one.length() != 0){
-    Thermal.println(one);
+    for(int i=0; i < 250; i++){
+      th_print(one);
+    }
    }
+}
+
+void th_print(String sp){
+  Thermal.println(sp);
+  Thermal.write(10);
+  Thermal.write(10);
 }

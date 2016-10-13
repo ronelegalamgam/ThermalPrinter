@@ -1,4 +1,5 @@
 #include <SoftwareSerial.h>
+#include <StringTokenizer.h>
 
 SoftwareSerial Thermal(10, 11);
 
@@ -6,7 +7,16 @@ int heatTime = 80;
 int heatInterval = 255;
 char printDensity = 15; 
 char printBreakTime = 15;
-String one;
+String str_to_parse;
+String dt           = "";
+String str_refno    = "Ref No: ";
+String foodname     = "";
+String quantity     = "";
+String unit_price   = "";
+String sub_total    = "Amount due: ";
+String cash         = "Payment: ";
+String change       = "Change: ";
+
 
 void setup() 
 {
@@ -33,24 +43,74 @@ void initPrinter()
 void loop()
 {
    if(Serial.available()){
-    one = Serial.readString();
-    Serial.println(one);
+    str_to_parse = Serial.readString();
+    int i = 0;
+    StringTokenizer tokens(str_to_parse, "|");
+    while (tokens.hasNext()){
+      if (i == 0) {
+          dt += tokens.nextToken();
+          i++;
+        }
+        if (i == 1) {
+          str_refno += tokens.nextToken();
+          i++;
+        }
+        if (i == 2) {
+          foodname += tokens.nextToken();
+          i++;
+        }
+        if (i == 3) {
+          quantity += tokens.nextToken();
+          i++;
+        }
+        if (i == 4) {
+          unit_price += tokens.nextToken();
+          i++;
+        }
+        if (i == 5) {
+          sub_total += tokens.nextToken();
+          i++;
+        }
+        if (i == 6) {
+          cash += tokens.nextToken();
+          i++;
+        }
+        if (i == 7) {
+          change += tokens.nextToken();
+          i++;
+          break;
+        }
+      }
    }
    else{
-      if(one.length() > 0){
-          Thermal.print("Concessionaire");
-          Thermal.println("De La Sall University Dasmariñas");
-          Thermal.println("Ref No: 0123456789");
-          
-          th_print(one);
-          delay(5);
-          one = "";
+      if(str_to_parse.length() > 0){
+          String comb = quantity + " " + foodname + " " + unit_price + " " + sub_total; 
+          Thermal.println(change); 
+          Thermal.println(cash);
+          Thermal.println(comb);
+          Thermal.println("QTY |FOOD|UNIT PRICE|SUBTOTAL");
+          Thermal.println(str_refno);
+          Thermal.println(dt);
+          Thermal.println("De La Sall University Dasmarinas");
+          Thermal.println("Concessionaire");
+          Thermal.write(10);
+          Thermal.write(10);
+          Thermal.write(10);
+          Thermal.write(10);
      }
+     reset_strings();
    }
 }//end void loop();
 
 
-//FUNCTIONS
-void th_print(String sp){
-  Thermal.println(sp);
+void reset_strings(){
+  str_to_parse = "";
+  dt           = "";
+  str_refno    = "Ref No: ";
+  foodname     = "";
+  quantity     = "";
+  unit_price   = "";
+  sub_total    = "";
+  cash         = "Payment: ";
+  change       = "Change: ";
 }

@@ -6,6 +6,7 @@ int heatTime = 80;
 int heatInterval = 255;
 char printDensity = 15; 
 char printBreakTime = 15;
+String one;
 
 void setup() 
 {
@@ -31,20 +32,21 @@ void initPrinter()
 
 void loop()
 {
-   String one;
    if(Serial.available()){
     one = Serial.readString();
-    Serial.println(one.length());
+    Serial.println(one);
    }
-   if(one.length() != 0){
-    for(int i=0; i < 250; i++){
-      th_print(one);
-    }
+   else{
+      if(one.length() > 0){
+          th_print(one);
+          delay(5);
+          one = "";
+     }
    }
-}
+}//end void loop();
 
+
+//FUNCTIONS
 void th_print(String sp){
   Thermal.println(sp);
-  Thermal.write(10);
-  Thermal.write(10);
 }

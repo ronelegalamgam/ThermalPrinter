@@ -1,5 +1,4 @@
-//MAIN
-include <SoftwareSerial.h>
+#include <SoftwareSerial.h>
 
 SoftwareSerial Thermal(10, 11);
 
@@ -39,6 +38,10 @@ void loop()
    }
    else{
       if(one.length() > 0){
+          Thermal.print("Concessionaire");
+          Thermal.println("De La Sall University Dasmariñas");
+          Thermal.println("Ref No: 0123456789");
+          
           th_print(one);
           delay(5);
           one = "";

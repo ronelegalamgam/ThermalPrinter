@@ -1,116 +1,157 @@
 #include <SoftwareSerial.h>
 #include <StringTokenizer.h>
 
-SoftwareSerial Thermal(10, 11);
+const byte rxPin  = 10;
+const byte txPin  = 11;
+const int  timeout = 1000;
 
-int heatTime = 80;
-int heatInterval = 255;
-char printDensity = 15; 
-char printBreakTime = 15;
-String str_to_parse;
-String dt           = "";
-String str_refno    = "Ref No: ";
-String foodname     = "";
-String quantity     = "";
-String unit_price   = "";
-String sub_total    = "Amount due: ";
-String cash         = "Payment: ";
-String change       = "Change: ";
-
+SoftwareSerial Thermal(rxPin, txPin);
 
 void setup() 
 {
- Serial.begin(19200); // for debug info to serial monitor
- Thermal.begin(9600); // to write to our new printer
+ Serial.begin(19200);   // for debug info to serial monitor
+ Serial.setTimeout(timeout);
+ Thermal.begin(9600);   // to write to our new printer
+ Thermal.setTimeout(timeout);
  initPrinter();
 }
 
 void initPrinter()
 {
- //Modify the print speed and heat
+ //initialize printer
  Thermal.write(27);
- Thermal.write(55);
- Thermal.write(7); //Default 64 dots = 8*('7'+1)
- Thermal.write(heatTime); //Default 80 or 800us
- Thermal.write(heatInterval); //Default 2 or 20us
- //Modify the print density and timeout
- Thermal.write(18);
- Thermal.write(35);
- int printSetting = (printDensity<<4) | printBreakTime;
- Thermal.write(printSetting); //Combination of printDensity and printBreakTime
+ Thermal.write(64);
+ delay(200);
+ //charset2
+ Thermal.write(27);
+ Thermal.write(54);
+ delay(200);
+ //font
+ Thermal.write(27);
+ Thermal.write(87);
+ Thermal.write(2);
+ delay(200);
+ //st gray degree
+ Thermal.write(27);
+ Thermal.write(109);
+ Thermal.write(2);
 }
 
 void loop()
 {
-   if(Serial.available()){
-    str_to_parse = Serial.readString();
-    int i = 0;
-    StringTokenizer tokens(str_to_parse, "|");
-    while (tokens.hasNext()){
-      if (i == 0) {
-          dt += tokens.nextToken();
-          i++;
-        }
-        if (i == 1) {
-          str_refno += tokens.nextToken();
-          i++;
-        }
-        if (i == 2) {
-          foodname += tokens.nextToken();
-          i++;
-        }
-        if (i == 3) {
-          quantity += tokens.nextToken();
-          i++;
-        }
-        if (i == 4) {
-          unit_price += tokens.nextToken();
-          i++;
-        }
-        if (i == 5) {
-          sub_total += tokens.nextToken();
-          i++;
-        }
-        if (i == 6) {
-          cash += tokens.nextToken();
-          i++;
-        }
-        if (i == 7) {
-          change += tokens.nextToken();
-          i++;
-          break;
-        }
-      }
-   }
-   else{
-      if(str_to_parse.length() > 0){
-          String comb = quantity + " " + foodname + " " + unit_price + " " + sub_total; 
-          Thermal.println(change); 
-          Thermal.println(cash);
-          Thermal.println(comb);
-          Thermal.println("QTY |FOOD|UNIT PRICE|SUBTOTAL");
-          Thermal.println(str_refno);
-          Thermal.println(dt);
-          Thermal.println("De La Sall University Dasmarinas");
-          Thermal.println("Concessionaire");
-          Thermal.write(10);
-          Thermal.write(10);
-          Thermal.write(10);
-          Thermal.write(10);
-     }
-     reset_strings();
-   }
+   if(Serial.available() > 0){
+      String dt                  = "";
+      String str_refno           = "Order ID: ";
+      String dlv_loc             = "Place: ";
+      String signature           = "Signature:";
+      String firstname           = "";
+      String lastname            = "";
+      String str_to_parse        = Serial.readString();
+      StringTokenizer tokens(str_to_parse, "|");
+      int i=0;
+      thermal_print(signature);
+      while (tokens.hasNext()){
+          if(i == 0){
+            firstname = tokens.nextToken();
+            i++;
+          }
+          if(i == 1){
+            lastname = tokens.nextToken();
+            i++;
+          }
+          if(i == 2) {
+            String total = "Tendered: " + tokens.nextToken();
+            thermal_print(total);
+            i++;
+          }
+          if(i == 3) {
+            dt = tokens.nextToken(); //date
+            i++;
+          }
+          if(i == 4) {
+            str_refno += tokens.nextToken(); //order id
+            i++;
+          }
+          if(i == 5){
+            dlv_loc += tokens.nextToken(); // location
+            i++;
+          }
+          if(i == 6){
+            String qty_name_st      ="";
+            String food_to_parse    ="";
+            int num                 = 0;
+            while(tokens.hasNext()){
+              if(num == 0){
+                qty_name_st = "Total: " + tokens.nextToken();
+                print_space();
+                thermal_print(qty_name_st);
+              }
+              if(num == 1){
+                qty_name_st = "Price: " + tokens.nextToken();
+                thermal_print(qty_name_st);
+              }
+              if(num == 2){
+                qty_name_st = "Qty: " + tokens.nextToken();
+                thermal_print(qty_name_st);
+                qty_name_st="";
+              }
+              if(num == 3){
+                food_to_parse = tokens.nextToken();
+                StringTokenizer tokens(food_to_parse," ");
+                int i=0;
+                String one = "";
+                String two = "";
+                while(tokens.hasNext()){
+                  if(i==0){
+                    one = tokens.nextToken();
+                    i++;
+                  }
+                  if(i==1){
+                    two = tokens.nextToken();
+                  }
+                }
+                thermal_print(two);
+                thermal_print(one);
+                num=-1;
+              }
+              num++;
+            }//end while
+          }//end if(i==5)
+      }//end while
+      print_space();
+      thermal_print(dlv_loc);
+      thermal_print(lastname);
+      thermal_print(firstname);
+      String customer = "Customer: ";
+      thermal_print(customer);
+      print_space();
+      thermal_print(str_refno);
+      thermal_print(dt);
+      thermal_print("Nanays");
+      thermal_print("DLSUD");
+      for(int i=0; i<30; i++){
+        Thermal.write(10);
+        delay(80);
+      } 
+      clear_buffer();
+   }//end if(serial.available())
 }//end void loop();
 
 
-void reset_strings(){
-  str_to_parse = "";
-  dt           = "";
-  str_refno    = "Ref No: ";
-  foodname     = "";
-  quantity     = "";
-  unit_price   = "";
-  sub_total    = "";
-  cash         = "Payment: ";
-  change       = "Change: ";
+void thermal_print(String s){
+  Thermal.print(s);
+  Thermal.write(13);
+}
+
+void clear_buffer(){
+  for(int i=0; i<10; i++){
+    while(Serial.available() > 0){
+      char t = Serial.read();
+    }
+    delay(10);
+  }
+}
+
+void print_space(){
+  Thermal.println("");
 }

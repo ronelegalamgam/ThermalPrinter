@@ -1,17 +1,17 @@
 #include <SoftwareSerial.h>
 #include <StringTokenizer.h>
 
-const byte rxPin  = 10;
-const byte txPin  = 11;
-const int  timeout = 1000;
+const byte rxPin      = 10;
+const byte txPin      = 11;
+const int  timeout    = 1000;
 
 SoftwareSerial Thermal(rxPin, txPin);
 
 void setup() 
 {
- Serial.begin(19200);   // for debug info to serial monitor
+ Serial.begin(19200);   
  Serial.setTimeout(timeout);
- Thermal.begin(9600);   // to write to our new printer
+ Thermal.begin(9600);               
  Thermal.setTimeout(timeout);
  initPrinter();
 }
@@ -40,81 +40,87 @@ void initPrinter()
 void loop()
 {
    if(Serial.available() > 0){
-      String dt                  = "";
-      String str_refno           = "Order ID: ";
+      int i=0;
+      String customer            = "Customer: ";
+      String tendered            = "Tendered: ";
+      String orderid               = "Order ID: ";
       String dlv_loc             = "Place: ";
       String signature           = "Signature:";
+      String date_and_time       = "";
       String firstname           = "";
       String lastname            = "";
       String str_to_parse        = Serial.readString();
-      StringTokenizer tokens(str_to_parse, "|");
-      int i=0;
+      StringTokenizer data_sent(str_to_parse, "|");
       thermal_print(signature);
-      while (tokens.hasNext()){
+      while (data_sent.hasNext()){
           if(i == 0){
-            firstname = tokens.nextToken();
+            firstname = data_sent.nextToken();
             i++;
           }
           if(i == 1){
-            lastname = tokens.nextToken();
+            lastname = data_sent.nextToken();
             i++;
           }
           if(i == 2) {
-            String total = "Tendered: " + tokens.nextToken();
-            thermal_print(total);
+            tendered += data_sent.nextToken();
+            thermal_print(tendered);
             i++;
           }
           if(i == 3) {
-            dt = tokens.nextToken(); //date
+            date_and_time = data_sent.nextToken(); //date
             i++;
           }
           if(i == 4) {
-            str_refno += tokens.nextToken(); //order id
+            orderid += data_sent.nextToken(); //order id
             i++;
           }
           if(i == 5){
-            dlv_loc += tokens.nextToken(); // location
+            dlv_loc += data_sent.nextToken(); // location
             i++;
           }
           if(i == 6){
-            String qty_name_st      ="";
-            String food_to_parse    ="";
-            int num                 = 0;
-            while(tokens.hasNext()){
-              if(num == 0){
-                qty_name_st = "Total: " + tokens.nextToken();
+            String qty_name_st      = "";
+            String food_to_parse    = "";
+            int    counter          = 0;
+            while(data_sent.hasNext()){
+              if(counter == 0){
+                qty_name_st = "Total: " + data_sent.nextToken();
                 print_space();
                 thermal_print(qty_name_st);
               }
-              if(num == 1){
-                qty_name_st = "Price: " + tokens.nextToken();
+              if(counter == 1){
+                qty_name_st = "Price: " + data_sent.nextToken();
                 thermal_print(qty_name_st);
               }
-              if(num == 2){
-                qty_name_st = "Qty: " + tokens.nextToken();
+              if(counter == 2){
+                qty_name_st = "Qty: " + data_sent.nextToken();
                 thermal_print(qty_name_st);
                 qty_name_st="";
               }
-              if(num == 3){
-                food_to_parse = tokens.nextToken();
-                StringTokenizer tokens(food_to_parse," ");
-                int i=0;
-                String one = "";
-                String two = "";
-                while(tokens.hasNext()){
-                  if(i==0){
-                    one = tokens.nextToken();
-                    i++;
+              if(counter == 3){
+                  food_to_parse            = data_sent.nextToken();
+                  String food_to_parse2    = food_to_parse;
+                  StringTokenizer count_number_of_spaces(food_to_parse," ");
+                  int num_of_spaces = 0;
+                  while(count_number_of_spaces.hasNext()){
+                       count_number_of_spaces.nextToken();
+                       num_of_spaces++;
                   }
-                  if(i==1){
-                    two = tokens.nextToken();
+                  StringTokenizer number_of_words(food_to_parse2," ");
+                  int num_of_print = num_of_spaces;
+                  String array_of_words[num_of_print];
+                  while(number_of_words.hasNext()){
+                    String get_name = number_of_words.nextToken();
+                    get_name.trim();
+                    array_of_words[num_of_spaces-1] = get_name;
+                    num_of_spaces--;
                   }
-                }
-                thermal_print(two);
-                thermal_print(one);
-                num=-1;
+                  for(int i=0; i<num_of_print; i++){
+                    thermal_print(array_of_words[i]);
+                  }
+                counter=-1;
               }
-              num++;
+              counter++;
             }//end while
           }//end if(i==5)
       }//end while
@@ -122,12 +128,11 @@ void loop()
       thermal_print(dlv_loc);
       thermal_print(lastname);
       thermal_print(firstname);
-      String customer = "Customer: ";
       thermal_print(customer);
       print_space();
-      thermal_print(str_refno);
-      thermal_print(dt);
-      thermal_print("Nanays");
+      thermal_print(orderid);
+      thermal_print(date_and_time);
+      thermal_print("Oven Maid");
       thermal_print("DLSUD");
       for(int i=0; i<30; i++){
         Thermal.write(10);

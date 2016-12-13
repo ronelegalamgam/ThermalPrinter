@@ -4,7 +4,9 @@
 const byte rxPin      = 10;
 const byte txPin      = 11;
 const int  timeout    = 1000;
-
+String store          = "Nanays";
+String school         = "DLSUD";
+String date_and_time  = "";
 SoftwareSerial Thermal(rxPin, txPin);
 
 void setup() 
@@ -40,43 +42,151 @@ void initPrinter()
 void loop()
 {
    if(Serial.available() > 0){
-      int i=0;
+      String str_to_parse = Serial.readString();
+      StringTokenizer check_print(str_to_parse, "|");
+      String type_of_print = check_print.nextToken();
+      if(type_of_print == "H"){
+        print_history(str_to_parse);
+      }else{
+        print_individual(str_to_parse);
+      }
+   }//end if(serial.available())
+}//end void loop();
+
+
+//CLEAR BUFFER
+void clear_buffer(){
+  for(int i=0; i<10; i++){
+    while(Serial.available() > 0){
+      char t = Serial.read();
+    }
+    delay(10);
+  }
+}
+
+//PRINTER FUNCTIONS
+void thermal_print(String s){
+  Thermal.print(s);
+  Thermal.write(13);
+}
+
+void thermal_space(){
+  Thermal.println("");
+}
+
+void thermal_linefeed(){
+  for(int i=0; i<25; i++){
+   Thermal.write(10);
+   delay(80);
+  } 
+}
+
+void parse_spaces(String s,int spaces){
+  StringTokenizer number_of_words(s," ");
+  int num_of_print = spaces;
+  String array_of_words[num_of_print];
+  while(number_of_words.hasNext()){
+    String get_name = number_of_words.nextToken();
+    get_name.trim();
+    array_of_words[spaces-1] = get_name;
+    spaces--;
+  }
+  for(int i=0; i<num_of_print;i++){
+      thermal_print(array_of_words[i]);
+  }
+}
+
+//PRINT TYPES
+void print_history(String s){
+  StringTokenizer history(s,"|");
+  String summary          = "Summary";
+  String total_sales      = "Total Sales:";
+  String total_amount     = "";
+  int counter             = 0;
+  int i                   = 0;
+  int num_of_spaces = 0;
+  while(history.hasNext()){
+    if(i==0){
+      history.nextToken();
+    }
+    if(i==1){
+      date_and_time = history.nextToken();
+    }
+    if(i==2){
+      total_amount =  history.nextToken();
+    }
+    if(i==3){
+      String food     = "";
+      String sold     = "";
+      while(history.hasNext()){
+        String subtotal = "";
+        if(counter == 0){
+          food = history.nextToken();
+          StringTokenizer count_number_of_spaces(food," ");
+          while(count_number_of_spaces.hasNext()){
+            count_number_of_spaces.nextToken();
+            num_of_spaces++;
+          }
+        }
+        if(counter == 1){
+          sold = "Sold:" + history.nextToken();
+        }
+        if(counter == 2){
+          subtotal = "Total:"+ history.nextToken(); 
+          thermal_space();
+          thermal_print(subtotal);
+          thermal_print(sold);   
+        }
+        if(counter == 3){
+          parse_spaces(food,num_of_spaces);
+          counter = -1;
+        }
+        counter++;
+      }
+      break;
+   }
+    i++;
+  }
+  thermal_space();
+  thermal_print(total_amount);
+  thermal_print(total_sales);
+  thermal_print(date_and_time);
+  thermal_print(summary);
+  thermal_print(store);
+  thermal_linefeed();
+  clear_buffer();
+}//end print_history
+
+void print_individual(String s){
+      int    i=0;
       String customer            = "Customer: ";
       String tendered            = "Tendered: ";
-      String orderid               = "Order ID: ";
-      String dlv_loc             = "Place: ";
+      String orderid             = "Order ID: ";
+      String location             = "Place: ";
       String signature           = "Signature:";
-      String date_and_time       = "";
       String firstname           = "";
       String lastname            = "";
-      String str_to_parse        = Serial.readString();
-      StringTokenizer data_sent(str_to_parse, "|");
+      StringTokenizer data_sent(s, "|");
       thermal_print(signature);
       while (data_sent.hasNext()){
           if(i == 0){
             firstname = data_sent.nextToken();
-            i++;
           }
           if(i == 1){
             lastname = data_sent.nextToken();
-            i++;
           }
           if(i == 2) {
             tendered += data_sent.nextToken();
             thermal_print(tendered);
-            i++;
           }
           if(i == 3) {
-            date_and_time = data_sent.nextToken(); //date
-            i++;
+            date_and_time = data_sent.nextToken();
           }
           if(i == 4) {
-            orderid += data_sent.nextToken(); //order id
-            i++;
+            orderid += data_sent.nextToken();
           }
           if(i == 5){
-            dlv_loc += data_sent.nextToken(); // location
-            i++;
+            location += data_sent.nextToken();
           }
           if(i == 6){
             String qty_name_st      = "";
@@ -85,7 +195,7 @@ void loop()
             while(data_sent.hasNext()){
               if(counter == 0){
                 qty_name_st = "Total: " + data_sent.nextToken();
-                print_space();
+                thermal_space();
                 thermal_print(qty_name_st);
               }
               if(counter == 1){
@@ -98,65 +208,32 @@ void loop()
                 qty_name_st="";
               }
               if(counter == 3){
-                  food_to_parse            = data_sent.nextToken();
-                  String food_to_parse2    = food_to_parse;
-                  StringTokenizer count_number_of_spaces(food_to_parse," ");
-                  int num_of_spaces = 0;
-                  while(count_number_of_spaces.hasNext()){
-                       count_number_of_spaces.nextToken();
-                       num_of_spaces++;
-                  }
-                  StringTokenizer number_of_words(food_to_parse2," ");
-                  int num_of_print = num_of_spaces;
-                  String array_of_words[num_of_print];
-                  while(number_of_words.hasNext()){
-                    String get_name = number_of_words.nextToken();
-                    get_name.trim();
-                    array_of_words[num_of_spaces-1] = get_name;
-                    num_of_spaces--;
-                  }
-                  for(int i=0; i<num_of_print; i++){
-                    thermal_print(array_of_words[i]);
-                  }
-                counter=-1;
+                 food_to_parse  = data_sent.nextToken();
+                 StringTokenizer count_number_of_spaces(food_to_parse," ");
+                 int num_of_spaces = 0;
+                 while(count_number_of_spaces.hasNext()){
+                    count_number_of_spaces.nextToken();
+                    num_of_spaces++;
+                 }
+                 parse_spaces(food_to_parse,num_of_spaces);
+                 counter=-1;
               }
               counter++;
             }//end while
-          }//end if(i==5)
+            break;
+          }//end if(i==6)
+          i++;
       }//end while
-      print_space();
-      thermal_print(dlv_loc);
+      thermal_space();
+      thermal_print(location);
       thermal_print(lastname);
       thermal_print(firstname);
       thermal_print(customer);
-      print_space();
+      thermal_space();
       thermal_print(orderid);
       thermal_print(date_and_time);
-      thermal_print("Oven Maid");
-      thermal_print("DLSUD");
-      for(int i=0; i<30; i++){
-        Thermal.write(10);
-        delay(80);
-      } 
+      thermal_print(store);
+      thermal_print(school);
+      thermal_linefeed();
       clear_buffer();
-   }//end if(serial.available())
-}//end void loop();
-
-
-void thermal_print(String s){
-  Thermal.print(s);
-  Thermal.write(13);
-}
-
-void clear_buffer(){
-  for(int i=0; i<10; i++){
-    while(Serial.available() > 0){
-      char t = Serial.read();
-    }
-    delay(10);
-  }
-}
-
-void print_space(){
-  Thermal.println("");
 }
